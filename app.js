@@ -1,7 +1,9 @@
 const express = require("express");
 const app = express();
+const requestLogger = require("./logger");
 
 app.use(express.json());
+app.use(requestLogger);
 
 let notes = [
   {
