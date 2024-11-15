@@ -1,9 +1,32 @@
 const express = require("express");
+const mongoose = require("mongoose");
+require("dotenv").config();
 const app = express();
 const requestLogger = require("./logger");
 
 app.use(express.json());
 app.use(requestLogger);
+
+const url = process.env.MONGODB_URI;
+
+mongoose.set("strictQuery", false);
+
+mongoose.connect(url);
+
+const noteSchema = new mongoose.Schema({
+  content: String,
+  important: Boolean,
+});
+
+const Note = mongoose.model("Note", noteSchema);
+
+noteSchema.set("toJSON", {
+  transform: (document, returnedObject) => {
+    returnedObject.id = returnedObject._id.toString();
+    delete returnedObject._id;
+    delete returnedObject.__v;
+  },
+});
 
 let notes = [
   {
@@ -28,7 +51,9 @@ app.get("/", (request, response) => {
 });
 
 app.get("/api/notes", (request, response) => {
-  response.json(notes);
+  Note.find({}).then((notes) => {
+    response.json(notes);
+  });
 });
 
 app.get("/api/notes/:id", (request, response) => {
