@@ -1,32 +1,11 @@
-const express = require("express");
-const mongoose = require("mongoose");
 require("dotenv").config();
+const express = require("express");
 const app = express();
 const requestLogger = require("./logger");
+const Note = require("./models/note");
 
 app.use(express.json());
 app.use(requestLogger);
-
-const url = process.env.MONGODB_URI;
-
-mongoose.set("strictQuery", false);
-
-mongoose.connect(url);
-
-const noteSchema = new mongoose.Schema({
-  content: String,
-  important: Boolean,
-});
-
-const Note = mongoose.model("Note", noteSchema);
-
-noteSchema.set("toJSON", {
-  transform: (document, returnedObject) => {
-    returnedObject.id = returnedObject._id.toString();
-    delete returnedObject._id;
-    delete returnedObject.__v;
-  },
-});
 
 let notes = [
   {
@@ -58,13 +37,12 @@ app.get("/api/notes", (request, response) => {
 
 app.get("/api/notes/:id", (request, response) => {
   const id = request.params.id;
-  const note = notes.find((note) => note.id === id);
 
-  if (note) {
+  console.log(id);
+
+  Note.findById(id).then((note) => {
     response.json(note);
-  } else {
-    response.status(404).end();
-  }
+  });
 });
 
 app.delete("/api/notes/:id", (request, response) => {
@@ -88,15 +66,19 @@ app.post("/api/notes", (request, response) => {
     });
   }
 
-  const note = {
+  const note = new Note({
     content: body.content,
     important: Boolean(body.important) || false,
-    id: generateId(),
-  };
+    //id: generateId(),
+  });
 
-  notes = notes.concat(note);
-  console.log(note);
-  response.json(note);
+  // notes = notes.concat(note);
+  // console.log(note);
+  // response.json(note);
+  note.save().then((savedNote) => {
+    console.log("note saved!");
+    response.json(savedNote);
+  });
 });
 
 const unknownEndpoint = (request, response) => {
@@ -105,6 +87,6 @@ const unknownEndpoint = (request, response) => {
 
 app.use(unknownEndpoint);
 
-const PORT = 3001;
+const PORT = process.env.PORT;
 app.listen(PORT);
 console.log(`Server running on port ${PORT}`);
